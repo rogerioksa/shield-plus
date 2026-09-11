@@ -8,6 +8,7 @@ use BackedEnum;
 use Filament\Clusters\Cluster;
 use Filament\Support\Icons\Heroicon;
 use Securyt\Acl\Concerns\GatesCluster;
+use UnitEnum;
 
 /**
  * Cluster de configuração do Shield+ no painel Filament.
@@ -25,7 +26,7 @@ class ShieldPlusCluster extends Cluster
 
     protected static ?string $navigationLabel = 'Shield+';
 
-    protected static ?string $navigationGroup = 'Configuração';
+    protected static string|UnitEnum|null $navigationGroup = 'Configuração';
 
     protected static ?int $navigationSort = 10;
 
