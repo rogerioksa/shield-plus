@@ -31,7 +31,7 @@ class ShieldPlusOverviewPage extends Page implements HasForms
 {
     use GatesPage, InteractsWithForms;
 
-    protected static string $cluster = ShieldPlusCluster::class;
+    protected static ?string $cluster = ShieldPlusCluster::class;
 
     protected static ?string $slug = 'visao-geral';
 
