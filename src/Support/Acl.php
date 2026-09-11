@@ -245,7 +245,7 @@ final class Acl
      */
     public static function permissionsForRole(string $role, Discovery $discovery): array
     {
-        $grants = self::roles()[$role] ?? [];
+        $grants = self::effectiveGrantsForRole($role);
 
         if (self::grantIsAll($grants)) {
             return $discovery->allPermissions();

@@ -51,9 +51,6 @@ class ShieldPlusRolesPage extends Page implements HasForms
 
     public ?array $data = [];
 
-    /** @var array<string, string> */
-    protected array $roleOptions = [];
-
     /** @var array<string, list<string>> */
     protected array $groupOptions = [];
 
@@ -65,9 +62,8 @@ class ShieldPlusRolesPage extends Page implements HasForms
 
     public function mount(): void
     {
-        $this->roleOptions = $this->buildRoleOptions();
-
-        $firstRole = array_key_first($this->roleOptions) ?? '';
+        $roles = $this->roleOptions();
+        $firstRole = array_key_first($roles) ?? '';
 
         $this->form->fill([
             'role' => $firstRole,
@@ -86,7 +82,7 @@ class ShieldPlusRolesPage extends Page implements HasForms
     }
 
     /** @return array<string, string> */
-    private function buildRoleOptions(): array
+    private function roleOptions(): array
     {
         $options = [];
 
@@ -191,7 +187,7 @@ class ShieldPlusRolesPage extends Page implements HasForms
                     ->schema([
                         Select::make('role')
                             ->label('Papel')
-                            ->options($this->roleOptions)
+                            ->options($this->roleOptions())
                             ->required()
                             ->live()
                             ->afterStateUpdated(function (string $state): void {
