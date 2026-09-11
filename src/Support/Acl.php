@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Securyt\Acl\Support;
 
 use Illuminate\Container\Container;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Securyt\Acl\Models\ShieldPlusGrant;
 
 /**
  * Nomeação, conjunto canônico e expansão dos grants (DSL) do ACL.
@@ -125,6 +127,73 @@ final class Acl
     public static function roles(): array
     {
         return (array) self::config('roles', []);
+    }
+
+    /**
+     * Overrides de grants persistidos no banco (cluster Shield+), por papel.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function roleOverrides(): array
+    {
+        if (! Container::getInstance()->bound('db') || ! self::hasGrantsTable()) {
+            return [];
+        }
+
+        return ShieldPlusGrant::query()
+            ->pluck('grants', 'role')
+            ->map(fn ($grants): array => is_array($grants) ? $grants : [])
+            ->all();
+    }
+
+    /**
+     * Matriz efetiva de papéis: config acl.roles como base, com os overrides do
+     * banco substituindo a entrada do papel quando existirem.
+     *
+     * @param  array<string, mixed>|null  $overrides
+     * @return array<string, mixed>
+     */
+    public static function mergeRoleOverrides(array $configRoles, array $overrides = []): array
+    {
+        foreach ($overrides as $role => $grants) {
+            $configRoles[(string) $role] = is_array($grants) ? $grants : [];
+        }
+
+        return $configRoles;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function rolesWithOverrides(): array
+    {
+        return self::mergeRoleOverrides(self::roles(), self::roleOverrides());
+    }
+
+    /**
+     * Grants efetivos de um papel (override do banco > config), ou [] se o papel
+     * não existe na matriz.
+     *
+     * @return array<string, mixed>|list<string>
+     */
+    public static function effectiveGrantsForRole(string $role): array
+    {
+        $overrides = self::roleOverrides();
+
+        if (array_key_exists($role, $overrides)) {
+            return $overrides[$role];
+        }
+
+        return (array) (self::roles()[$role] ?? []);
+    }
+
+    private static function hasGrantsTable(): bool
+    {
+        try {
+            return Schema::hasTable('shield_plus_grants');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public static function grantIsAll(array|string|null $grant): bool

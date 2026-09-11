@@ -76,4 +76,30 @@ final class AclSupportTest extends TestCase
             Acl::permissionsForSubjectGrant('Lead', 'crud'),
         );
     }
+
+    public function test_merge_role_overrides_replaces_only_override_roles(): void
+    {
+        $config = [
+            'admin' => '*',
+            'gerente' => ['pages' => ['DealPipeline']],
+        ];
+
+        $overrides = [
+            'gerente' => ['pages' => ['DealPipeline', 'ShieldPlusRolesPage']],
+            'corretor_extra' => ['read'],
+        ];
+
+        $merged = Acl::mergeRoleOverrides($config, $overrides);
+
+        $this->assertSame('*', $merged['admin']);
+        $this->assertSame(['pages' => ['DealPipeline', 'ShieldPlusRolesPage']], $merged['gerente']);
+        $this->assertSame(['read'], $merged['corretor_extra']);
+    }
+
+    public function test_merge_role_overrides_with_no_overrides_is_identity(): void
+    {
+        $config = ['admin' => '*'];
+
+        $this->assertSame($config, Acl::mergeRoleOverrides($config, []));
+    }
 }

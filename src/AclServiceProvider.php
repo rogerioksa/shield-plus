@@ -20,10 +20,17 @@ class AclServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'shield-plus');
+
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__.'/../config/acl.php' => $this->app->configPath('acl.php'),
             ], 'acl-config');
+
+            $this->publishesMigrations([
+                __DIR__.'/../database/migrations' => $this->app->databasePath('migrations'),
+            ], 'acl-migrations');
 
             $this->commands([
                 AclSyncCommand::class,

@@ -13,8 +13,9 @@ Construído sobre `spatie/laravel-permission` (namespace `Securyt\Acl\`).
 - PHP ^8.3
 - Laravel ^13.0
 - Filament ^5.0
-- `spatie/laravel-permission` instalado e configurado (trait `HasRoles` no User,
-  tabelas publicadas)
+- `spatie/laravel-permission` instalado e configurado (trait `HasRoles` no User)
+- Tabelas do permission: as migrations do plugin as criam (guardadas — se o app
+  já publicou as do spatie, são ignoradas)
 
 ## Instalação
 
@@ -29,12 +30,18 @@ Construído sobre `spatie/laravel-permission` (namespace `Securyt\Acl\`).
    ```
    Ou use um Packagist privado (Satis) e omita o passo acima.
 
-1. Instale e publique a config:
+1. Instale e publique a config e as migrations:
 
    ```bash
    composer require rogerioksa/shield-plus:^0.1
    php artisan vendor:publish --tag=acl-config
+   php artisan migrate                 # tabelas spatie (se não existirem) + shield_plus_grants
    ```
+
+   As migrations do plugin são **guardadas**: tabelas do
+   `spatie/laravel-permission` já criadas no app são ignoradas (no-op), e a
+   tabela `shield_plus_grants` (overrides de grants do editor visual) é sempre
+   criada se não existir. Também publicáveis via `--tag=acl-migrations`.
 
 2. Publique/configure a matriz no `config/acl.php` do app:
 
@@ -91,17 +98,46 @@ Construído sobre `spatie/laravel-permission` (namespace `Securyt\Acl\`).
   escopos (`read` = `ViewAny, View`; `crud`; `manage`; `full` = todos) e os
   grupos de pages/clusters/widgets.
 - **`acl:sync`:** cria permissões faltantes, faz `syncPermissions` por papel e
-  remove órfãs (fora do canônico) — exceto com `--no-prune`.
+  remove órfãs (fora do canônico) — exceto com `--no-prune`. A matriz efetiva é
+  `config('acl.roles')` **sobreposta** pelos overrides de `shield_plus_grants`
+  (editor visual do cluster).
 - **Gates:** `GatesPage` (sobre `canAccess`), `GatesCluster`, `GatesWidget` —
   sempre derivados do conjunto canônico, sem strings hardcoded.
 - **Ownership:** `ScopesVisibleTo::scopeVisibleTo($user)` + `RestrictsOwnRecords::canOwn()`.
 
 ## Gestão de papéis
 
-A tela de gestão (RoleResource do painel) **não** faz parte do pacote — é
-app-level. O package expõe `Discovery` e `Acl` públicos para qualquer painel
-montar as próprias telas de edição (permissões por subject recortadas por
-escopo/lists, e os grupos pages/clusters/widgets).
+### Cluster Shield+ (editor visual)
+
+O pacote entrega um cluster de configuração no painel (`ShieldPlusCluster` +
+`ShieldPlusPlugin`), com duas páginas:
+
+- **Visão geral** (`ShieldPlusOverviewPage`): estado atual (canônico, papéis,
+  overrides do banco) e sincronização com um clique — mesma lógica do
+  `acl:sync`, com toggle de prune.
+- **Papéis e grants** (`ShieldPlusRolesPage`): editor da matriz por papel. Os
+  grants salvos são persistidos em `shield_plus_grants` e **sobrepõem**
+  `config('acl.roles')`, sem reescrever a config: `acl:sync` aplica a matriz
+  efetiva (config + overrides). Deixar idêntico à config remove o override.
+
+Para registrar o cluster num painel:
+
+```php
+use Securyt\Acl\Filament\ShieldPlusPlugin;
+
+// dentro do panel(...) do PanelProvider:
+->plugins([ShieldPlusPlugin::make()])
+```
+
+O acesso é permissionado pelas permissões canônicas (**`View:ShieldPlusCluster`**,
+`View:ShieldPlusOverviewPage`, `View:ShieldPlusRolesPage`) — derivadas
+automaticamente pelo `Discovery` e provisionadas pelo `acl:sync`. Papeis com `*`
+(os super) as recebem; papéis explícitos precisam referenciá-las em `roles` da
+config (grupos `pages` / `clusters`).
+
+> Para **edição completa de papéis** (criar/renomear papéis, ajustar permissões
+> pontuais no banco) a tela do app (ex.: RoleResource) continua app-level — o
+> cluster gerencia a **matriz de grants**.
 
 ## Testes do pacote
 
